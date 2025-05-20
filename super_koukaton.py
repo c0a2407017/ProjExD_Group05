@@ -14,7 +14,7 @@ GREEN = (0, 255, 0)
 # ブロックの上端のy座標（背景画像に合わせて調整）
 GROUND_Y = 610  # 必要に応じて微調整してください
 
-class Player(pygame.sprite.Sprite):
+class Bird(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = pygame.Surface([30, 50])
@@ -53,7 +53,7 @@ class Player(pygame.sprite.Sprite):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("マリオっぽいゲーム")
+    pygame.display.set_caption("スーパーこうかとんブラザーズ")
     clock = pygame.time.Clock()
 
     # 背景画像のロード
@@ -62,8 +62,8 @@ def main():
     bg_height = bg_img.get_height()
 
     all_sprites = pygame.sprite.Group()
-    player = Player()
-    all_sprites.add(player)
+    bird = Bird()
+    all_sprites.add(bird)
 
     scroll_x = 0  # 背景のスクロール量
 
@@ -74,24 +74,24 @@ def main():
                 running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    player.speed_x = -5
+                    bird.speed_x = -5
                 if event.key == pygame.K_RIGHT:
-                    player.speed_x = 5
+                    bird.speed_x = 5
                 if event.key == pygame.K_SPACE:
-                    player.jump()
+                    bird.jump()
             if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT and player.speed_x < 0:
-                    player.speed_x = 0
-                if event.key == pygame.K_RIGHT and player.speed_x > 0:
-                    player.speed_x = 0
+                if event.key == pygame.K_LEFT and bird.speed_x < 0:
+                    bird.speed_x = 0
+                if event.key == pygame.K_RIGHT and bird.speed_x > 0:
+                    bird.speed_x = 0
 
         # ゲームループ
         all_sprites.update()
 
         # プレイヤーが画面中央より右に行ったら背景をスクロール
         center_x = SCREEN_WIDTH // 2
-        if player.world_x > center_x:
-            scroll_x = player.world_x - center_x
+        if bird.world_x > center_x:
+            scroll_x = bird.world_x - center_x
         else:
             scroll_x = 0
         # 背景の範囲外に行かないように制限
@@ -102,10 +102,10 @@ def main():
             scroll_x = 0
 
         # プレイヤーの画面上のx座標を調整
-        if player.world_x > center_x:
-            player.rect.x = center_x
+        if bird.world_x > center_x:
+            bird.rect.x = center_x
         else:
-            player.rect.x = player.world_x
+            bird.rect.x = bird.world_x
 
         # 描画
         screen.blit(bg_img, (-scroll_x, 0))
