@@ -1,4 +1,6 @@
-import pygame
+import pygame 
+import sys
+import random
 
 # 画面のサイズ
 SCREEN_WIDTH = 1100
@@ -14,11 +16,23 @@ GREEN = (0, 255, 0)
 # ブロックの上端のy座標（背景画像に合わせて調整）
 GROUND_Y = 610  # 必要に応じて微調整してください
 
+def check_bound(obj_rct:pygame.Rect) -> tuple[bool,bool]:
+    """
+    オブジェクトが画面内or画面外を判定し，真理値タプルを返す関数
+    引数：こうかとんや敵などのRect
+    戻り値：横方向，縦方向のはみ出し判定結果（画面内：True／画面外：False）
+    """
+    yoko, tate = True, True
+    if obj_rct.left < 0 or SCREEN_WIDTH < obj_rct.right:
+        yoko = False
+    if obj_rct.top < 0 or SCREEN_HEIGHT < obj_rct.bottom:
+        tate = False
+    return yoko, tate 
+
 class Bird(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([30, 50])
-        self.image.fill(RED)
+        self.image = pygame.image.load("fig/3.png")
         self.rect = self.image.get_rect()
         self.rect.x = 50
         self.rect.bottom = GROUND_Y  # ブロックの上に乗せる
@@ -50,6 +64,50 @@ class Bird(pygame.sprite.Sprite):
             self.is_jumping = True
 
 
+class Enemy(pygame.sprite.Sprite):
+    """
+    敵のクラス
+    """
+    def __init__(self):
+        img = pygame.image.load("fig/0.png")
+        super().__init__()
+        self.image = img
+        self.rect = self.image.get_rect()
+
+        self.rect.x = random.randint(100, SCREEN_WIDTH - 100)
+        self.world_x = random.randint(100, SCREEN_WIDTH - 100)  # ワールド座標
+        self.rect.y = -self.rect.height
+
+        self.speed_y = 0
+        self.gravity = 10
+        self.speed = 0
+        self.is_landed = False
+
+    def update(self):
+        """
+        敵の速度self.speed
+        落下速度 self.speed_y
+        引数　screen:画面Surface
+        """
+        if not self.is_landed:
+            self.speed_y += self.gravity
+            self.rect.y = self.speed_y
+
+            if self.rect.bottom >= GROUND_Y:
+                self.rect.bottom = GROUND_Y
+                self.is_landed = True
+                self.speed_y = 0
+            else:
+                self.rect.x += self.speed
+        else:
+            self.speed = -3
+            self.world_x += self.speed
+
+
+            self.rect.move_ip(self.speed,0)
+        if check_bound(pygame.Rect(self.world_x, self.rect.y, self.rect.width, self.rect.height)) != (True, True):
+            self.kill() 
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -57,21 +115,23 @@ def main():
     clock = pygame.time.Clock()
 
     # 背景画像のロード
-    bg_img = pygame.transform.rotozoom(pygame.image.load("ex5/fig/pg_bg.png").convert(), 0, 2.92)
+    bg_img = pygame.transform.rotozoom(pygame.image.load("fig/pg_bg.png").convert(), 0, 2.92)
     bg_width = bg_img.get_width()
     bg_height = bg_img.get_height()
 
-    all_sprites = pygame.sprite.Group()
     bird = Bird()
-    all_sprites.add(bird)
+    emys = pygame.sprite.Group()
 
     scroll_x = 0  # 背景のスクロール量
 
-    running = True
-    while running:
+    tmr = 0
+    #emys.add(Enemy())
+    
+
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                return 0 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     bird.speed_x = -5
@@ -85,8 +145,6 @@ def main():
                 if event.key == pygame.K_RIGHT and bird.speed_x > 0:
                     bird.speed_x = 0
 
-        # ゲームループ
-        all_sprites.update()
 
         # プレイヤーが画面中央より右に行ったら背景をスクロール
         center_x = SCREEN_WIDTH // 2
@@ -107,14 +165,25 @@ def main():
         else:
             bird.rect.x = bird.world_x
 
+        if tmr%20 == 0:
+            emys.add(Enemy())
+
+
         # 描画
         screen.blit(bg_img, (-scroll_x, 0))
-        all_sprites.draw(screen)
+        bird.update()
+        screen.blit(bird.image,bird.rect)
+        emys.update()
+        for emy in emys:
+            emy.rect.x = emy.world_x - scroll_x  # スクロール補正
+            screen.blit(emy.image, emy.rect)
         pygame.display.flip()
 
-        clock.tick(FPS)
+        tmr += 1
+        clock.tick(50)
 
-    pygame.quit()
 
 if __name__ == '__main__':
     main()
+    pygame.quit()
+    sys.exit()
