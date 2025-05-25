@@ -14,7 +14,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 # ブロックの上端のy座標（背景画像に合わせて調整）
-GROUND_Y = 610  # 必要に応じて微調整してください
+GROUND_Y = 610  
 
 def check_bound(obj_rct:pygame.Rect) -> tuple[bool,bool]:
     """
@@ -123,9 +123,7 @@ def main():
     emys = pygame.sprite.Group()
 
     scroll_x = 0  # 背景のスクロール量
-
     tmr = 0
-    #emys.add(Enemy())
     
 
     while True:
