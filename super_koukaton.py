@@ -41,7 +41,7 @@ class Bird(pygame.sprite.Sprite):
         self.speed_x = 0
         self.speed_y = 0
         self.gravity = 1
-        self.jump_power = -20
+        self.jump_power = -25      
         self.is_jumping = False
         self.world_x = 50  # ワールド座標
 
@@ -81,7 +81,7 @@ class Enemy(pygame.sprite.Sprite):
     """
     敵のクラス
     """
-    def __init__(self,scroll_x):
+    def __init__(self,scroll_x,bird_world_x):
         img = pygame.image.load("fig/0.png")
         super().__init__()
         self.image = img
@@ -96,7 +96,12 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 0
         self.is_landed = False
 
-    def update(self,scroll_x):
+        self.track_time = 1  # 追跡時間
+        self.tracking = False  # 着地後に追跡開始
+        self.bird_world_x = bird_world_x  # 初期化時の参照（オプション）
+
+
+    def update(self,scroll_x,bird_world_x):
         """
         敵の速度self.speed
         落下速度 self.speed_y
@@ -110,12 +115,21 @@ class Enemy(pygame.sprite.Sprite):
                 self.rect.bottom = GROUND_Y
                 self.is_landed = True
                 self.speed_y = 0
-            else:
-                self.rect.x += self.speed
+                self.tracking = True  # 着地したら追跡開始
         else:
-            self.speed = -3
+            if self.tracking and self.track_time > 0:
+                if self.world_x > bird_world_x:
+                    self.speed = -3
+                elif self.world_x < bird_world_x:
+                    self.speed = 3
+                else:
+                    self.speed = 0
+                self.track_time -= 1
+            else:
+                self.tracking = False  # 時間が過ぎたら追跡終了
+
             self.world_x += self.speed
-            self.rect.move_ip(self.speed,0)
+            self.rect.move_ip(self.speed, 0)
 
 
         if check_bound(pygame.Rect(self.world_x, self.rect.y, self.rect.width, self.rect.height),scroll_x) != (True, True):
@@ -177,7 +191,7 @@ def main():
             bird.rect.x = bird.world_x
 
         if tmr%100 == 0:
-            enemy = Enemy(scroll_x)
+            enemy = Enemy(scroll_x, bird.world_x)
             emys.add(enemy)
 
         for emy in pygame.sprite.spritecollide(bird, emys, True):
@@ -186,7 +200,7 @@ def main():
             # 当たり画像だけを描画
             bird.change_img(screen)
             # 敵も描画
-            emys.update(scroll_x)
+            emys.update(scroll_x,bird.world_x)
             for emy in emys:
                 emy.rect.x = emy.world_x - scroll_x
                 screen.blit(emy.image, emy.rect)
@@ -194,10 +208,9 @@ def main():
             time.sleep(2)
             return
 
-        # ↓ここでは通常通り
         screen.blit(bg_img, (-scroll_x, 0))
         bird.update(screen)
-        emys.update(scroll_x)
+        emys.update(scroll_x,bird.world_x)
         for emy in emys:
             emy.rect.x = emy.world_x - scroll_x
             screen.blit(emy.image, emy.rect)
