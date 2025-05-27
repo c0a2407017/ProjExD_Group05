@@ -1,4 +1,6 @@
 import pygame
+import random
+
 
 # 画面のサイズ
 SCREEN_WIDTH = 1100
@@ -11,8 +13,8 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
-# ブロックの上端のy座標（背景画像に合わせて調整）
-GROUND_Y = 610  # 必要に応じて微調整してください
+# 地面のY座標
+GROUND_Y = 610
 
 class Bird(pygame.sprite.Sprite):
     def __init__(self):
@@ -21,24 +23,19 @@ class Bird(pygame.sprite.Sprite):
         self.image.fill(RED)
         self.rect = self.image.get_rect()
         self.rect.x = 50
-        self.rect.bottom = GROUND_Y  # ブロックの上に乗せる
+        self.rect.bottom = GROUND_Y
         self.speed_x = 0
         self.speed_y = 0
         self.gravity = 1
         self.jump_power = -20
         self.is_jumping = False
-        self.world_x = 50  # ワールド座標
+        self.world_x = 50
 
     def update(self):
-        # 左右移動
         self.world_x += self.speed_x
-        # プレイヤーの画面上のx座標は後で調整
-
-        # 重力
         self.speed_y += self.gravity
         self.rect.y += self.speed_y
 
-        # 地面との衝突判定（ブロックの上）
         if self.rect.bottom > GROUND_Y:
             self.rect.bottom = GROUND_Y
             self.speed_y = 0
@@ -49,6 +46,20 @@ class Bird(pygame.sprite.Sprite):
             self.speed_y = self.jump_power
             self.is_jumping = True
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface([40, 40])
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speed_x = -5
+
+    def update(self):
+        self.rect.x += self.speed_x
+        if self.rect.right < 0:
+            self.kill()
 
 def main():
     pygame.init()
@@ -56,65 +67,90 @@ def main():
     pygame.display.set_caption("スーパーこうかとんブラザーズ")
     clock = pygame.time.Clock()
 
-    # 背景画像のロード
+    # 背景画像
     bg_img = pygame.transform.rotozoom(pygame.image.load("ex5/fig/pg_bg.png").convert(), 0, 2.92)
     bg_width = bg_img.get_width()
-    bg_height = bg_img.get_height()
 
     all_sprites = pygame.sprite.Group()
+    enemies = pygame.sprite.Group()
     bird = Bird()
     all_sprites.add(bird)
 
-    scroll_x = 0  # 背景のスクロール量
-
+    scroll_x = 0
     running = True
+    game_over = False
+
+    enemy_spawn_timer = 0
+    enemy_spawn_interval = 90  # 約1.5秒
+
+    font = pygame.font.Font(None, 80)  # フォント準備
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    bird.speed_x = -5
-                if event.key == pygame.K_RIGHT:
-                    bird.speed_x = 5
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and not game_over:
                     bird.jump()
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT and bird.speed_x < 0:
-                    bird.speed_x = 0
-                if event.key == pygame.K_RIGHT and bird.speed_x > 0:
-                    bird.speed_x = 0
 
-        # ゲームループ
-        all_sprites.update()
+        if not game_over:
+            keys = pygame.key.get_pressed()
+            base_speed = 5
+            speed = base_speed * 1.5 if keys[pygame.K_LSHIFT] else base_speed
 
-        # プレイヤーが画面中央より右に行ったら背景をスクロール
-        center_x = SCREEN_WIDTH // 2
-        if bird.world_x > center_x:
-            scroll_x = bird.world_x - center_x
-        else:
-            scroll_x = 0
-        # 背景の範囲外に行かないように制限
-        max_scroll = bg_width - SCREEN_WIDTH
-        if scroll_x > max_scroll:
-            scroll_x = max_scroll
-        if scroll_x < 0:
-            scroll_x = 0
+            if keys[pygame.K_LEFT]:
+                bird.speed_x = -speed
+            elif keys[pygame.K_RIGHT]:
+                bird.speed_x = speed
+            else:
+                bird.speed_x = 0
 
-        # プレイヤーの画面上のx座標を調整
-        if bird.world_x > center_x:
-            bird.rect.x = center_x
-        else:
-            bird.rect.x = bird.world_x
+            all_sprites.update()
+            enemies.update()
 
-        # 描画
+            enemy_spawn_timer += 1
+            if enemy_spawn_timer >= enemy_spawn_interval:
+                enemy_spawn_timer = 0
+                enemy_x = scroll_x + SCREEN_WIDTH + 20
+                enemy_y = GROUND_Y - 40
+                enemy = Enemy(enemy_x, enemy_y)
+                enemies.add(enemy)
+                all_sprites.add(enemy)
+
+            center_x = SCREEN_WIDTH // 2
+            if bird.world_x > center_x:
+                scroll_x = bird.world_x - center_x
+            else:
+                scroll_x = 0
+
+            max_scroll = bg_width - SCREEN_WIDTH
+            scroll_x = max(0, min(scroll_x, max_scroll))
+
+            if bird.world_x > center_x:
+                bird.rect.x = center_x
+            else:
+                bird.rect.x = bird.world_x
+
+            if pygame.sprite.spritecollideany(bird, enemies):
+                game_over = True
+                game_over_time = pygame.time.get_ticks()  # ゲームオーバーになった時間
+
         screen.blit(bg_img, (-scroll_x, 0))
         all_sprites.draw(screen)
-        pygame.display.flip()
 
+        if game_over:
+            text = font.render("ゲームオーバー！", True, (255, 0, 0))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+            screen.blit(text, rect)
+
+            # ゲームオーバーから2秒経過したら終了
+            if pygame.time.get_ticks() - game_over_time > 2000:
+                running = False
+
+        pygame.display.flip()
         clock.tick(FPS)
 
     pygame.quit()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
