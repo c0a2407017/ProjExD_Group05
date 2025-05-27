@@ -1,6 +1,7 @@
 import pygame 
-import sys
 import random
+import sys
+import time
 
 # 画面のサイズ
 SCREEN_WIDTH = 1100
@@ -16,14 +17,14 @@ GREEN = (0, 255, 0)
 # ブロックの上端のy座標（背景画像に合わせて調整）
 GROUND_Y = 610  
 
-def check_bound(obj_rct:pygame.Rect) -> tuple[bool,bool]:
+def check_bound(obj_rct:pygame.Rect,scroll_x) -> tuple[bool,bool]:
     """
     オブジェクトが画面内or画面外を判定し，真理値タプルを返す関数
     引数：こうかとんや敵などのRect
     戻り値：横方向，縦方向のはみ出し判定結果（画面内：True／画面外：False）
     """
     yoko, tate = True, True
-    if obj_rct.left < 0 or SCREEN_WIDTH < obj_rct.right:
+    if obj_rct.right  < scroll_x or SCREEN_WIDTH + scroll_x < obj_rct.left:
         yoko = False
     if obj_rct.top < 0 or SCREEN_HEIGHT < obj_rct.bottom:
         tate = False
@@ -33,6 +34,7 @@ class Bird(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = pygame.image.load("fig/3.png")
+        self.image = pygame.transform.flip(self.image,True,False)
         self.rect = self.image.get_rect()
         self.rect.x = 50
         self.rect.bottom = GROUND_Y  # ブロックの上に乗せる
@@ -43,7 +45,15 @@ class Bird(pygame.sprite.Sprite):
         self.is_jumping = False
         self.world_x = 50  # ワールド座標
 
-    def update(self):
+    def change_img(self,screen: pygame.Surface):
+        """
+        こうかとん画像を切り替え，画面に転送する
+        引数1 screen：画面Surface
+        """
+        self.image = pygame.transform.rotozoom(pygame.image.load(f"fig/8.png"), 0, 0.9)        
+        screen.blit(self.image, self.rect)
+
+    def update(self,screen):
         # 左右移動
         self.world_x += self.speed_x
         # プレイヤーの画面上のx座標は後で調整
@@ -58,6 +68,9 @@ class Bird(pygame.sprite.Sprite):
             self.speed_y = 0
             self.is_jumping = False
 
+        screen.blit(self.image,self.rect)
+        
+
     def jump(self):
         if not self.is_jumping:
             self.speed_y = self.jump_power
@@ -68,22 +81,22 @@ class Enemy(pygame.sprite.Sprite):
     """
     敵のクラス
     """
-    def __init__(self):
+    def __init__(self,scroll_x):
         img = pygame.image.load("fig/0.png")
         super().__init__()
         self.image = img
         self.rect = self.image.get_rect()
 
-        self.rect.x = random.randint(100, SCREEN_WIDTH - 100)
-        self.world_x = random.randint(100, SCREEN_WIDTH - 100)  # ワールド座標
-        self.rect.y = -self.rect.height
+        self.rect.x = random.randint(100 + scroll_x, SCREEN_WIDTH + scroll_x)
+        self.world_x = random.randint(100 + scroll_x, 1100 + scroll_x)  # ワールド座標
 
+        self.rect.y = -self.rect.height
         self.speed_y = 0
         self.gravity = 10
         self.speed = 0
         self.is_landed = False
 
-    def update(self):
+    def update(self,scroll_x):
         """
         敵の速度self.speed
         落下速度 self.speed_y
@@ -102,10 +115,10 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.speed = -3
             self.world_x += self.speed
-
-
             self.rect.move_ip(self.speed,0)
-        if check_bound(pygame.Rect(self.world_x, self.rect.y, self.rect.width, self.rect.height)) != (True, True):
+
+
+        if check_bound(pygame.Rect(self.world_x, self.rect.y, self.rect.width, self.rect.height),scroll_x) != (True, True):
             self.kill() 
 
 def main():
@@ -163,17 +176,30 @@ def main():
         else:
             bird.rect.x = bird.world_x
 
-        if tmr%20 == 0:
-            emys.add(Enemy())
+        if tmr%100 == 0:
+            enemy = Enemy(scroll_x)
+            emys.add(enemy)
 
+        for emy in pygame.sprite.spritecollide(bird, emys, True):
+            # 背景を再描画
+            screen.blit(bg_img, (-scroll_x, 0))
+            # 当たり画像だけを描画
+            bird.change_img(screen)
+            # 敵も描画
+            emys.update(scroll_x)
+            for emy in emys:
+                emy.rect.x = emy.world_x - scroll_x
+                screen.blit(emy.image, emy.rect)
+            pygame.display.update()
+            time.sleep(2)
+            return
 
-        # 描画
+        # ↓ここでは通常通り
         screen.blit(bg_img, (-scroll_x, 0))
-        bird.update()
-        screen.blit(bird.image,bird.rect)
-        emys.update()
+        bird.update(screen)
+        emys.update(scroll_x)
         for emy in emys:
-            emy.rect.x = emy.world_x - scroll_x  # スクロール補正
+            emy.rect.x = emy.world_x - scroll_x
             screen.blit(emy.image, emy.rect)
         pygame.display.flip()
 
@@ -182,6 +208,7 @@ def main():
 
 
 if __name__ == '__main__':
+    pygame.init()
     main()
     pygame.quit()
     sys.exit()
