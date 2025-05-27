@@ -108,6 +108,27 @@ class Enemy(pygame.sprite.Sprite):
 
         if check_bound(pygame.Rect(self.world_x, self.rect.y, self.rect.width, self.rect.height),scroll_x) != (True, True):
             self.kill() 
+    def grow(self):#キャラクターが大きくなる
+        self.image = pygame.Surface([60, 100])
+        self.image.fill(RED)
+        old_rect = self.rect
+        self.rect = self.image.get_rect()
+        self.rect.centerx = old_rect.centerx
+        self.rect.bottom = old_rect.bottom
+        
+class Mushroom(pygame.sprite.Sprite):#item
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((30, 30))
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speed_x=-1
+    def update(self):
+        self.rect.x += self.speed_x
+        if self.rect.right < 0:
+            self.kill()
 
 def main():
     pygame.init()
@@ -131,6 +152,7 @@ def main():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                return 0
                 return 0 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
