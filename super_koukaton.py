@@ -166,7 +166,7 @@ def main():
                     bird.jump()
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT and bird.speed_x < 0:
-                    bird.speed_x = 0
+                    bird.speed_x = 0 
                 if event.key == pygame.K_RIGHT and bird.speed_x > 0:
                     bird.speed_x = 0
 
