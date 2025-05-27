@@ -134,7 +134,7 @@ def main():
                 return 0 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    bird.jump()
+                    bird.jump(
 
         # ←ここで左右キーの状態を見て速度を毎フレーム更新
         if keys[pygame.K_LEFT]:
