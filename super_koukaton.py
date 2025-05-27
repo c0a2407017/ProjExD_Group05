@@ -22,6 +22,9 @@ BLOCK_QUESTION_POS = [(16, 4), (21, 4), (22, 8), (23, 4), (78, 4), (94, 8), (106
 
 MUSHROOM_POS = [(21, 4)]  # キノコが出現するブロックの位置
 
+# 落とし穴の位置リスト
+FALLING_PIT_POS = [(69, 70) , (86, 88), (153, 154)]
+
 # ブロックの上端のy座標（背景画像に合わせて調整）
 GROUND_Y = 610  # 必要に応じて微調整してください
 
@@ -53,6 +56,8 @@ class Player(pygame.sprite.Sprite):
         self.is_jumping = False
         self.status = "normal"
         self.world_x = 50  # ワールド座標
+        self.GROUND_Y = GROUND_Y  # 地面のy座標
+
 
     def update_y(self):
         # 重力
@@ -60,20 +65,51 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += self.speed_y
 
         # 地面との衝突判定（ブロックの上）
-        if self.rect.bottom > GROUND_Y:
-            self.rect.bottom = GROUND_Y
+        if self.rect.bottom > self.GROUND_Y:
+            self.rect.bottom = self.GROUND_Y
             self.speed_y = 0
             self.is_jumping = False
+
+        # 画面の外に出たら終了
+        if self.rect.top > SCREEN_HEIGHT:
+            #　ゲームオーバー処理
+            self.kill()  # スプライトを削除
+            print("ゲームオーバー")
+            pygame.quit()
+            exit()
 
     def update_x(self):
          # 左右移動
         self.world_x += self.speed_x
         self.rect.x = self.world_x  # ←ここで毎回world_xから計算
 
+        # 落とし穴の処理
+        nofalls = []
+        for pit in FALLING_PIT_POS:
+            pit_rect = (pit[0] * 16 * 2.92, (pit[1] + 1) * 16 * 2.92)
+            if pit_rect[0] <= self.rect.right <= pit_rect[1]   :
+                self.GROUND_Y += 400  # 落とし穴に落ちたら地面を下げる
+                # if self.rect.bottom > GROUND_Y:
+                #     if self.rect.left < pit_rect[0]:
+                #         self.rect.left = pit_rect[0]
+                #         self.world_x = self.rect.x  # ←world_xも修正
+                #         self.speed_x = 0
+                #     elif self.rect.right > pit_rect[1]:
+                #         self.rect.right = pit_rect[1]
+                #         self.world_x = self.rect.x  # ←world_xも修正
+                #         self.speed_x = 0
+            else:
+                nofalls += [1]
+        if len(nofalls) == len(FALLING_PIT_POS):
+            self.GROUND_Y = GROUND_Y  # 落とし穴から出たら元の地面の位置に戻す
+
+            
+
     def jump(self):
         if not self.is_jumping:
             self.speed_y = self.jump_power
             self.is_jumping = True
+
 
 class Block_nomal(pygame.sprite.Sprite):
     def __init__(self, xy: tuple[int, int]):
@@ -139,6 +175,7 @@ class Block_nomal(pygame.sprite.Sprite):
                     player.rect.left = self.rect.right
                     player.world_x = player.rect.x  # ←world_xも修正
                     player.speed_x = 0
+        
 
 class Block_transparent(pygame.sprite.Sprite):
     def __init__(self, xy: tuple[int, int]):
@@ -148,7 +185,7 @@ class Block_transparent(pygame.sprite.Sprite):
         img = pygame.transform.rotozoom(pygame.image.load("fig/block_nomal.png").convert(), 0, 2.92)
         img.fill(WHITE)
         self.image = img
-        # self.image.set_colorkey(WHITE)  # 白色を透明にする
+        self.image.set_colorkey(WHITE)  # 白色を透明にする
         self.rect = self.image.get_rect()
         self.rect.center = (xy[0] * 2 + 1)* 8 * 2.92,  GROUND_Y - (xy[1] * 2 - 1) * 8 * 2.92
     
@@ -334,7 +371,7 @@ class Mushroom(pygame.sprite.Sprite):
                 print("キノコとプレイヤーが衝突しました")
                 # プレイヤーのサイズが大きくなる
                 player.status = "big"  # プレイヤーの状態をビッグに変更
-                player.image = pygame.Surface([30, 50])
+                player.image = pygame.Surface([40, 60])
                 player.image.fill(GREEN)
                 # player.image = pygame.transform.rotozoom(pygame.image.load("fig/mario_big.png").convert(), 0, 2.92)
             self.kill()  # キノコを削除
@@ -389,11 +426,11 @@ def main():
         blocks.add(block)
     scroll_x = 0  # 背景のスクロール量
 
-    running = True
-    while running:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                return
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     player.speed_x = -5
