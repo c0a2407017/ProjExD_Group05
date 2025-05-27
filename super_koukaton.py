@@ -94,11 +94,11 @@ def main():
     
     scroll_x = 0  # 背景のスクロール量
 
-    running = True
-    while running:
+    
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                return 0
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     bird.speed_x = -5
