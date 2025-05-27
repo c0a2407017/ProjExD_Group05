@@ -25,6 +25,9 @@ MUSHROOM_POS = [(21, 4)]  # キノコが出現するブロックの位置
 # 落とし穴の位置リスト
 FALLING_PIT_POS = [(69, 70) , (86, 88), (153, 154)]
 
+# ゴールの位置
+GOAL_POS = (198, 1)  # ゴールの位置（x座標, y座標）
+
 # ブロックの上端のy座標（背景画像に合わせて調整）
 GROUND_Y = 610  # 必要に応じて微調整してください
 
@@ -55,11 +58,17 @@ class Player(pygame.sprite.Sprite):
         self.jump_power = -20
         self.is_jumping = False
         self.status = "normal"
-        self.world_x = 50  # ワールド座標
+        self.world_x = 50 # ワールド座標
         self.GROUND_Y = GROUND_Y  # 地面のy座標
+        self.gaol_pos = (int(GOAL_POS[0] * 16 * 2.92), int(GROUND_Y - GOAL_POS[1] * 16 * 2.92))  # ゴールの位置
+        self.gaol_speed_x = 1.3  # ゴールに到達したときの横移動速度
+        self.diray = 0  # ディレイ（必要に応じて使用）
 
 
     def update_y(self):
+        # ゴールの処理
+        if self.gaol_pos[0] <= self.world_x < self.gaol_pos[0] + self.gaol_speed_x:
+            self.reach_goal_y()
         # 重力
         self.speed_y += self.gravity
         self.rect.y += self.speed_y
@@ -78,7 +87,14 @@ class Player(pygame.sprite.Sprite):
             pygame.quit()
             exit()
 
+
     def update_x(self):
+        # ゴールの処理
+        if self.world_x >= self.gaol_pos[0]:
+            self.speed_x = 0  # ゴールに到達したら横移動を停止
+        if self.world_x >= self.gaol_pos[0] and self.rect.bottom >= self.gaol_pos[1]:
+            self.reach_goal_x()
+
          # 左右移動
         self.world_x += self.speed_x
         self.rect.x = self.world_x  # ←ここで毎回world_xから計算
@@ -110,6 +126,31 @@ class Player(pygame.sprite.Sprite):
             self.speed_y = self.jump_power
             self.is_jumping = True
 
+    # ゴール到着のy座標処理
+    def reach_goal_y(self):
+        # ゴールに到達した場合の処理
+        self.world_x = self.gaol_pos[0]
+        self.rect.centerx = self.world_x  # ←world_xも修正
+        if self.rect.bottom < self.gaol_pos[1]:
+            self.speed_y = 0
+            self.gravity = 1.5
+
+    # ゴール到着のx座標処理
+    def reach_goal_x(self):
+        self.speed_x = self.gaol_speed_x  # ゴールに到達したら横移動速度を設定
+        self.speed_y = 0
+        if self.world_x >= int(204.2 * 16 * 2.92):
+            self.status = "goal"  # ゴール状態に変更
+            # 3秒待ってからゲーム終了
+            if self.diray == 30 * 5:  # 3秒待つ
+                # 3秒待ってからゲーム終了
+                pygame.quit()
+                exit()
+            else:
+                self.diray += 1
+
+
+        
 
 class Block_nomal(pygame.sprite.Sprite):
     def __init__(self, xy: tuple[int, int]):
@@ -169,12 +210,10 @@ class Block_nomal(pygame.sprite.Sprite):
                     # プレイヤーが右からブロックに衝突した場合
                     player.rect.right = self.rect.left
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
                 elif player.speed_x < 0 and player.rect.right > self.rect.left:
                     # プレイヤーが左からブロックに衝突した場合
                     player.rect.left = self.rect.right
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
         
 
 class Block_transparent(pygame.sprite.Sprite):
@@ -215,12 +254,10 @@ class Block_transparent(pygame.sprite.Sprite):
                     # プレイヤーが右からブロックに衝突した場合
                     player.rect.right = self.rect.left
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
                 elif player.speed_x < 0 and player.rect.right > self.rect.left:
                     # プレイヤーが左からブロックに衝突した場合
                     player.rect.left = self.rect.right
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
 
 class Block_question(pygame.sprite.Sprite):
     def __init__(self, xy: tuple[int, int], all_sprites: pygame.sprite.Group, MUSHROOM_POS: list, mushroom: pygame.sprite.Group):
@@ -289,12 +326,10 @@ class Block_question(pygame.sprite.Sprite):
                     # プレイヤーが右からブロックに衝突した場合
                     player.rect.right = self.rect.left
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
                 elif player.speed_x < 0 and player.rect.right > self.rect.left:
                     # プレイヤーが左からブロックに衝突した場合
                     player.rect.left = self.rect.right
                     player.world_x = player.rect.x  # ←world_xも修正
-                    player.speed_x = 0
 
 
 # キノコのクラス
@@ -503,7 +538,8 @@ def main():
             block_screen_rect.x -= scroll_x
             screen.blit(block.image, block_screen_rect)
         # プレイヤーを描画
-        screen.blit(player.image, player.rect)
+        if player.status != "goal":
+            screen.blit(player.image, player.rect)
         # --- ここまで修正 ---
 
         pygame.display.flip()
