@@ -81,9 +81,9 @@ def main():
     game_over = False
 
     enemy_spawn_timer = 0
-    enemy_spawn_interval = 90  # 約1.5秒
+    enemy_spawn_interval = 90 
 
-    font = pygame.font.Font(None, 80)  # フォント準備
+    font = pygame.font.Font(None, 80) 
 
     while running:
         for event in pygame.event.get():
@@ -108,44 +108,16 @@ def main():
             all_sprites.update()
             enemies.update()
 
-            enemy_spawn_timer += 1
-            if enemy_spawn_timer >= enemy_spawn_interval:
-                enemy_spawn_timer = 0
-                enemy_x = scroll_x + SCREEN_WIDTH + 20
-                enemy_y = GROUND_Y - 40
-                enemy = Enemy(enemy_x, enemy_y)
-                enemies.add(enemy)
-                all_sprites.add(enemy)
-
             center_x = SCREEN_WIDTH // 2
-            if bird.world_x > center_x:
-                scroll_x = bird.world_x - center_x
-            else:
-                scroll_x = 0
-
-            max_scroll = bg_width - SCREEN_WIDTH
-            scroll_x = max(0, min(scroll_x, max_scroll))
-
+            
             if bird.world_x > center_x:
                 bird.rect.x = center_x
             else:
                 bird.rect.x = bird.world_x
 
-            if pygame.sprite.spritecollideany(bird, enemies):
-                game_over = True
-                game_over_time = pygame.time.get_ticks()  # ゲームオーバーになった時間
-
         screen.blit(bg_img, (-scroll_x, 0))
         all_sprites.draw(screen)
 
-        if game_over:
-            text = font.render("ゲームオーバー！", True, (255, 0, 0))
-            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
-            screen.blit(text, rect)
-
-            # ゲームオーバーから2秒経過したら終了
-            if pygame.time.get_ticks() - game_over_time > 2000:
-                running = False
 
         pygame.display.flip()
         clock.tick(FPS)
