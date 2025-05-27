@@ -49,6 +49,27 @@ class Bird(pygame.sprite.Sprite):
             self.speed_y = self.jump_power
             self.is_jumping = True
 
+    def grow(self):#キャラクターが大きくなる
+        self.image = pygame.Surface([60, 100])
+        self.image.fill(RED)
+        old_rect = self.rect
+        self.rect = self.image.get_rect()
+        self.rect.centerx = old_rect.centerx
+        self.rect.bottom = old_rect.bottom
+        
+class Mushroom(pygame.sprite.Sprite):#item
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((30, 30))
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speed_x=-1
+    def update(self):
+        self.rect.x += self.speed_x
+        if self.rect.right < 0:
+            self.kill()
 
 def main():
     pygame.init()
@@ -65,6 +86,12 @@ def main():
     bird = Bird()
     all_sprites.add(bird)
 
+    #itemを加える
+    item_group = pygame.sprite.Group()
+    item_group.add(
+        Mushroom(800, GROUND_Y - 30),
+    )
+    
     scroll_x = 0  # 背景のスクロール量
 
     running = True
@@ -87,7 +114,8 @@ def main():
 
         # ゲームループ
         all_sprites.update()
-
+        item_group.update()#itemを呼び出す
+        
         # プレイヤーが画面中央より右に行ったら背景をスクロール
         center_x = SCREEN_WIDTH // 2
         if bird.world_x > center_x:
@@ -107,8 +135,16 @@ def main():
         else:
             bird.rect.x = bird.world_x
 
+        # アイテムとの当たり判定＋関数を呼び出す
+        if pygame.sprite.spritecollide(bird, item_group, dokill=True):#dokillはあたると消えるプログラむ
+            bird.grow()
         # 描画
         screen.blit(bg_img, (-scroll_x, 0))
+        
+        # アイテムのスクロール対応描画
+        for item in item_group:
+            screen.blit(item.image, (item.rect.x - scroll_x, item.rect.y))
+
         all_sprites.draw(screen)
         pygame.display.flip()
 
