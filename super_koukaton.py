@@ -64,7 +64,7 @@ class CustomGroup(pygame.sprite.Group):
                 method(*args, **kwargs)
 
 class Bird(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, time_left):
         super().__init__()
         self.image = pygame.transform.rotozoom(pygame.image.load("fig/3.png"), 0, 0.9)
         self.image = pygame.transform.flip(self.image,True,False)
@@ -87,7 +87,7 @@ class Bird(pygame.sprite.Sprite):
         self.invincible_time = 0  #  無敵になった時間
         self.coin_count = 0 # コインの枚数
         self.score = "000000000"
-        self.time_left = max(0, 300 - (pygame.time.get_ticks() // 1000))  # 残り時間
+        self.time_left = time_left
 
     # 画像を切り替える
     def change_img(self):
@@ -724,7 +724,7 @@ def main():
 
     all_sprites = pygame.sprite.Group()
     blocks = CustomGroup()  # ブロック用のカスタムグループ
-    player = Bird()
+    player = Bird(time_left = 300)
     emys = CustomGroup() # 敵用のカスタムグループ
     mushroom = CustomGroup()  # キノコ用のカスタムグループ
     COIN = CustomGroup()  # コイン用のカスタムグループ
@@ -848,7 +848,8 @@ def main():
         screen.blit(coin_image, (SCREEN_WIDTH - 600, 10))
 
         # 画面上部に制限時間を表示
-        player.time_left = max(0, 300 - (pygame.time.get_ticks() // 1000))
+        if player.status != "goal":
+            player.time_left = max(0, 300 - (pygame.time.get_ticks() // 1000))
         lines = ["TIME", player.time_left, "×", player.coin_count, "KOUKATON", player.score]
         lines_xy = [(SCREEN_WIDTH - 100, 10), (SCREEN_WIDTH - 90, 30), (SCREEN_WIDTH - 565, 15), (SCREEN_WIDTH - 540, 15), (100, 10), (100, 30)]
         font_size = [40, 40, 50, 50, 40, 40]  # 各行のフォントサイズ
